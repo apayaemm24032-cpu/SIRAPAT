@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin - SIRAPAT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-6 md:p-10">
+    <script>
+        if (localStorage.getItem('isAdminLoggedIn') !== 'true') {
+            window.location.href = '/login';
+        }
+    </script>
+
+    <div class="max-w-6xl mx-auto space-y-8">
+        
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+            <div>
+                <h1 class="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+                    <span class="bg-indigo-600 text-white p-2.5 rounded-xl text-xl shadow-lg shadow-indigo-500/30">
+                        <i class="fa-solid fa-chart-pie"></i>
+                    </span>
+                    Dashboard Admin SIRAPAT
+                </h1>
+                <p class="text-slate-400 text-sm mt-1">Kelola sesi rapat, buat QR Code, dan cetak rekapitulasi kehadiran</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+                <button onclick="exportKePDF()" class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-rose-600/20 transition flex items-center gap-2">
+                    <i class="fa-solid fa-file-pdf"></i> Export PDF
+                </button>
+                <button onclick="exportKeExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-emerald-600/20 transition flex items-center gap-2">
+                    <i class="fa-solid fa-file-excel"></i> Export Excel
+                </button>
+                <button onclick="logout()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition flex items-center gap-2">
+                    <i class="fa-solid fa-right-from-bracket"></i> Logout
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-slate-800 border border-slate-700/80 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-plus-circle text-indigo-400"></i> Buat Sesi Rapat Baru
+                    </h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Judul Rapat</label>
+                            <input type="text" id="judulRapat" placeholder="Contoh: Rapat Evaluasi Bulanan" 
+                                   class="w-full bg-slate-900/70 border border-slate-700 text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Kode Rapat</label>
+                            <input type="text" id="kodeRapat" placeholder="Contoh: RPT01" 
+                                   class="w-full bg-slate-900/70 border border-slate-700 text-white text-sm rounded-xl px-4 py-3 uppercase tracking-wider focus:outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <button onclick="buatRapat()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl px-6 py-3 transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i> Buat Rapat & Generate QR
+                    </button>
+                    <p id="pesanRapat" class="text-sm font-medium mt-3"></p>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 border border-slate-700/80 rounded-2xl p-6 shadow-xl flex flex-col items-center justify-center text-center">
+                <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-qrcode text-indigo-400"></i> QR Code Presensi
+                </h3>
+                <div id="qrcode" class="p-4 bg-white rounded-2xl shadow-inner mb-3 min-h-[160px] min-w-[160px] flex items-center justify-center">
+                    <span class="text-xs text-slate-400 italic">QR Code akan muncul di sini</span>
+                </div>
+                <p id="qrLabel" class="text-xs font-mono text-indigo-300 font-semibold uppercase"></p>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 border border-slate-700/80 rounded-2xl p-6 shadow-xl space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-users text-indigo-400"></i> Rekapitulasi Kehadiran
+                </h2>
+                <div class="flex items-center gap-3">
+                    <input type="text" id="searchInput" onkeyup="filterData()" placeholder="Cari ID / Judul Rapat..." 
+                           class="bg-slate-900/70 border border-slate-700 text-white text-xs rounded-xl px-4 py-2 focus:outline-none focus:border-indigo-500 w-64">
+                    <span id="totalPeserta" class="bg-slate-700 text-indigo-300 text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap">
+                        0 Peserta
+                    </span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-slate-700/50">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-900/80 text-slate-400 font-semibold uppercase text-xs">
+                            <th class="p-4">ID User</th>
+                            <th class="p-4">Judul Rapat</th>
+                            <th class="p-4">Kode Rapat</th>
+                            <th class="p-4">Waktu Hadir</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelData" class="divide-y divide-slate-700/50 text-slate-200">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let globalDataRekap = [];
+
+        async function loadRekap() {
+            const res = await fetch('http://localhost:3000/api/admin/rekap');
+            const result = await res.json();
+
+            if (result.status === 'success') {
+                globalDataRekap = result.data;
+                tampilkanTabel(globalDataRekap);
+            }
+        }
+
+        function tampilkanTabel(data) {
+            const tbody = document.getElementById('tabelData');
+            const totalPeserta = document.getElementById('totalPeserta');
+            tbody.innerHTML = '';
+            totalPeserta.innerText = `${data.length} Peserta`;
+
+            if(data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-500">Data tidak ditemukan.</td></tr>`;
+                return;
+            }
+
+            data.forEach(item => {
+                const row = `
+                    <tr class="hover:bg-slate-700/30 transition">
+                        <td class="p-4 font-mono text-indigo-300 font-semibold">#${item.user_id}</td>
+                        <td class="p-4 font-medium text-white">${item.judul}</td>
+                        <td class="p-4"><span class="bg-slate-900 border border-slate-700 text-indigo-400 px-2.5 py-1 rounded-lg font-mono text-xs">${item.kode_presensi}</span></td>
+                        <td class="p-4 text-slate-400">${new Date(item.waktu_hadir).toLocaleString('id-ID')}</td>
+                    </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function filterData() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = globalDataRekap.filter(item => 
+                item.user_id.toString().includes(keyword) || 
+                item.judul.toLowerCase().includes(keyword) ||
+                item.kode_presensi.toLowerCase().includes(keyword)
+            );
+            tampilkanTabel(filtered);
+        }
+
+        async function buatRapat() {
+            const judul = document.getElementById('judulRapat').value;
+            const kode = document.getElementById('kodeRapat').value.toUpperCase();
+            const pesan = document.getElementById('pesanRapat');
+
+            if(!judul || !kode) {
+                pesan.innerText = "Judul dan Kode Rapat wajib diisi!";
+                pesan.className = "text-sm font-medium mt-3 text-rose-400";
+                return;
+            }
+
+            const res = await fetch('http://localhost:3000/api/meetings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ judul, kode_presensi: kode })
+            });
+
+            const data = await res.json();
+            pesan.innerText = data.message;
+            pesan.className = data.status === 'success' ? 'text-sm font-medium mt-3 text-emerald-400' : 'text-sm font-medium mt-3 text-rose-400';
+            
+            if (data.status === 'success') {
+                const qrContainer = document.getElementById('qrcode');
+                qrContainer.innerHTML = '';
+                new QRCode(qrContainer, { text: kode, width: 140, height: 140 });
+                document.getElementById('qrLabel').innerText = `Kode: ${kode}`;
+
+                document.getElementById('judulRapat').value = '';
+                document.getElementById('kodeRapat').value = '';
+                loadRekap();
+            }
+        }
+
+        function exportKeExcel() {
+            if (globalDataRekap.length === 0) return alert('Belum ada data presensi!');
+            const formattedData = globalDataRekap.map(item => ({
+                'ID User': item.user_id,
+                'Judul Rapat': item.judul,
+                'Kode Rapat': item.kode_presensi,
+                'Waktu Hadir': new Date(item.waktu_hadir).toLocaleString('id-ID')
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(formattedData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap Presensi");
+            XLSX.writeFile(workbook, `Rekap_Presensi_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        function exportKePDF() {
+            if (globalDataRekap.length === 0) return alert('Belum ada data presensi!');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(16);
+            doc.text("Laporan Rekapitulasi Presensi SIRAPAT", 14, 20);
+            doc.setFontSize(10);
+            doc.text(`Tanggal Cetak: ${new Date().toLocaleString('id-ID')}`, 14, 28);
+            doc.autoTable({
+                head: [['ID User', 'Judul Rapat', 'Kode Rapat', 'Waktu Hadir']],
+                body: globalDataRekap.map(item => [item.user_id, item.judul, item.kode_presensi, new Date(item.waktu_hadir).toLocaleString('id-ID')]),
+                startY: 34,
+                theme: 'striped',
+                headStyles: { fillColor: [79, 70, 229] }
+            });
+            doc.save(`Rekap_Presensi_${new Date().toISOString().slice(0,10)}.pdf`);
+        }
+
+        function logout() {
+            localStorage.removeItem('isAdminLoggedIn');
+            window.location.href = '/login';
+        }
+
+        loadRekap();
+    </script>
+</body>
+</html>
