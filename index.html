@@ -377,7 +377,7 @@
                 return;
             }
 
-            const res = await fetch('http://localhost:3000/api/attendances', {
+            const res = await fetch('http:/api/attendances', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user_id, kode_presensi, status })
@@ -399,7 +399,7 @@
         }
 
         async function loadStats() {
-            const res = await fetch('http://localhost:3000/api/admin/stats');
+            const res = await fetch('http:/api/admin/stats');
             const result = await res.json();
             if (result.status === 'success') {
                 document.getElementById('statTotalRapat').innerText = result.data.total_rapat;
@@ -409,7 +409,7 @@
         }
 
         async function loadRekap() {
-            const res = await fetch('http://localhost:3000/api/admin/rekap');
+            const res = await fetch('http/api/admin/rekap');
             const result = await res.json();
             if (result.status === 'success') {
                 globalDataRekap = result.data;
@@ -450,7 +450,7 @@
 
         async function hapusKehadiran(id) {
             if (confirm('Hapus data kehadiran ini?')) {
-                const res = await fetch(`http://localhost:3000/api/attendances/${id}`, { method: 'DELETE' });
+                const res = await fetch(`http:/api/attendances/${id}`, { method: 'DELETE' });
                 const result = await res.json();
                 if (result.status === 'success') {
                     showToast('Data berhasil dihapus');
@@ -488,7 +488,7 @@
                 return;
             }
 
-            const res = await fetch('http://localhost:3000/api/meetings', {
+            const res = await fetch('http:/api/meetings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ judul, kode_presensi: kode, durasi_menit: durasi })
