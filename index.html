@@ -546,5 +546,45 @@
             doc.save(`Rekap_Presensi_${new Date().toISOString().slice(0,10)}.pdf`);
         }
     </script>
+    <script>
+    // 1. Cek Token Autentikasi
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+    if (!token) {
+        alert('Silakan login terlebih dahulu!');
+        window.location.href = '/login.html';
+    }
+
+    // 2. Tampilkan Nama User & Role di Header (Sesuai role)
+    console.log('User Aktif:', user.nama, '| Role:', user.role);
+
+    // 3. Sembunyikan Tombol Tambah Rapat jika BUKAN Admin
+    if (user.role !== 'admin') {
+        const btnTambahRapat = document.getElementById('btnTambahRapat'); // Pasang ID ini di tombol tambah rapatmu
+        if (btnTambahRapat) btnTambahRapat.style.display = 'none';
+    }
+
+    // 4. Fitur Logout
+    function logout() {
+        localStorage.clear();
+        alert('Berhasil keluar akun');
+        window.location.href = '/login.html';
+    }
+
+    // 5. Fitur Presensi Otomatis (Mengirim ID User yang sedang login)
+    async function isiPresensi(rapatId) {
+        const res = await fetch('/api/presensi', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ rapat_id: rapatId, user_id: user.id })
+        });
+        const data = await res.json();
+        alert(data.message);
+    }
+</script>
 </body>
 </html>
